@@ -1,0 +1,113 @@
+---
+title: "Day 6"
+format: html
+editor: source
+---
+```{r setup}
+library(tidyverse)
+df <- read_lines('data/day6_input')
+
+```
+
+## --- Day 6: Tuning Trouble ---
+The preparations are finally complete; you and the Elves leave camp on foot and begin to make your way toward the star fruit grove.
+
+As you move through the dense undergrowth, one of the Elves gives you a handheld device. He says that it has many fancy features, but the most important one to set up right now is the communication system.
+
+However, because he's heard you have significant experience dealing with signal-based systems, he convinced the other Elves that it would be okay to give you their one malfunctioning device - surely you'll have no problem fixing it.
+
+As if inspired by comedic timing, the device emits a few colorful sparks.
+
+To be able to communicate with the Elves, the device needs to lock on to their signal. The signal is a series of seemingly-random characters that the device receives one at a time.
+
+To fix the communication system, you need to add a subroutine to the device that detects a start-of-packet marker in the datastream. In the protocol being used by the Elves, the start of a packet is indicated by a sequence of four characters that are all different.
+
+The device will send your subroutine a datastream buffer (your puzzle input); your subroutine needs to identify the first position where the four most recently received characters were all different. Specifically, it needs to report the number of characters from the beginning of the buffer to the end of the first such four-character marker.
+
+For example, suppose you receive the following datastream buffer:
+
+mjqjpqmgbljsphdztnvjfqwrcgsmlb
+After the first three characters (mjq) have been received, there haven't been enough characters received yet to find the marker. The first time a marker could occur is after the fourth character is received, making the most recent four characters mjqj. Because j is repeated, this isn't a marker.
+
+The first time a marker appears is after the seventh character arrives. Once it does, the last four characters received are jpqm, which are all different. In this case, your subroutine should report the value 7, because the first start-of-packet marker is complete after 7 characters have been processed.
+
+Here are a few more examples:
+
+bvwbjplbgvbhsrlpgdmjqwftvncz: first marker after character 5
+nppdvjthqldpwncqszvftbrmjlhg: first marker after character 6
+nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg: first marker after character 10
+zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw: first marker after character 11
+How many characters need to be processed before the first start-of-packet marker is detected?
+
+### Solution Process
+
+#### Attempt 1
+There are several different ways to solve this puzzle but it comes down to the way I want to parse the dataset.  I'm thinking I will want to create a tidy table of each item in the series and then a column containing the 3 previous items. The third column will compare the single letter item with the previous 3 items to make sure they do not match in any way. If the letter is unique from the previous 3 then the item row_number will be returned.  The first "row_number" returned will be the answer.
+
+After trying this solution out I realized that I need to make sure all is unique in the set, not just that the single item is unique across the previous 3.
+```{r}
+str_split(df, '')[[1]] %>%
+  as_tibble() %>%
+  mutate(past3 = paste0(lag(value, 1), lag(value, 2), lag(value, 3))) %>%
+  mutate(set = grepl(value, past3))
+```
+
+#### Attempt 2
+
+This time I'm going to try to identify all 4 in the set to see if they are unique.  I'm not exactly sure the best way to do that at this time but will work through different conditional options.  Note that I'm ignoring the first 3 rows in the dataset.
+
+I made a mistake in removing the first 3 list elements. I originally thought I would remove number 2 because it would equal 4 unique items but that took my result and made it too low.  I corrected this error and still made it dynamic by just adding 3 to all the reuslts 
+```{r}
+groupings <- str_split(df, '')[[1]] %>%
+  as_tibble() %>%
+  mutate(group = paste0(value, lag(value, 1), lag(value, 2), lag(value, 3)))
+
+res <- map(groupings$group, function(x){
+  map(map(str_split(x, ''), unique), length)
+})
+
+first(which(unlist(map(res[-c(1:3)], function(x) x == 4)))+3)
+
+```
+
+## --- Part Two ---
+Your device's communication system is correctly detecting packets, but still isn't working. It looks like it also needs to look for messages.
+
+A start-of-message marker is just like a start-of-packet marker, except it consists of 14 distinct characters rather than 4.
+
+Here are the first positions of start-of-message markers for all of the above examples:
+
+mjqjpqmgbljsphdztnvjfqwrcgsmlb: first marker after character 19
+bvwbjplbgvbhsrlpgdmjqwftvncz: first marker after character 23
+nppdvjthqldpwncqszvftbrmjlhg: first marker after character 23
+nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg: first marker after character 29
+zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw: first marker after character 26
+How many characters need to be processed before the first start-of-message marker is detected?
+
+This one came faster but I didn't do it in a more automated way.  I think it would be better to create a function that would handle the multiple lags more dynamically but for the purpose of this excercise it works.
+```{r}
+groupings <- str_split(df, '')[[1]] %>%
+  as_tibble() %>%
+  mutate(group = paste0(value, 
+                        lag(value, 1), 
+                        lag(value, 2), 
+                        lag(value, 3),
+                        lag(value, 4),
+                        lag(value, 5),
+                        lag(value, 6),
+                        lag(value, 7),
+                        lag(value, 8),
+                        lag(value, 9),
+                        lag(value, 10),
+                        lag(value, 11),
+                        lag(value, 12),
+                        lag(value, 13)
+                        ))
+
+res <- map(groupings$group, function(x){
+  map(map(str_split(x, ''), unique), length)
+})
+
+first(which(unlist(map(res, function(x) x == 14))))
+
+```
